@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meat charset="utf-8"></meat>
+    <title>UNB Poker Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+    <style>
+        :root {
+            --main-border-color: #a09696;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #flop {
+            display: flex;
+            position: relative;
+            width: 353px;
+            top: -30px;
+            left: 23px;
+            height: 100px;
+        }
+        .flopcard {
+            flex: 1 5;
+            border: 1px solid grey;
+        }
+        .playermove {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1 3;
+            BORDER: 1px solid grey;
+            cursor: pointer;
+        }
+        #usermessagewrap {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex: 7 10;
+        }
+        #lobbywrap {
+            flex: 3 10;
+            border-left: 1px solid var(--main-border-color);
+            padding: 3px;
+            height: 344px;
+        }
+        #head {
+            width: 393px;
+            text-align: center;
+        }
+        #gridwrap {
+            display: flex;
+        }
+        #grid2 {
+            padding: 30px;
+            border-right: 1px solid var(--main-border-color);
+            border-bottom: 1px solid var(--main-border-color);
+            border-top: 1px solid  var(--main-border-color);
+        }
+        #grid3 {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            border-right: 1px solid var(--main-border-color);
+            border-bottom: 1px solid var(--main-border-color);
+            border-left: 1px solid var(--main-border-color);
+            width: 1060px;
+        }
+        #grid {
+            width: 600px;
+            border: 1px solid var(--main-border-color);
+        }
+        headdiv {
+            height: 0px;
+            width: 0px;
+        }
+        #pokerwrap {
+            border-radius: 50%;
+            border: 1px solid black;
+            margin-bottom: 75px;
+            position: relative;
+            left: 100px;
+        }
+        #usermessages {
+            width: 678px;
+            height: 200px;
+            max-height: 200px;
+            text-align: left;
+            background: #fbdbbf;
+            overflow-y: scroll;
+            padding-bottom: 10px;
+            padding-left: 10px;
+            line-height: 22px;
+            border: 1px solid black;
+        }
+        #yourcards {
+            display: flex;
+            padding: 10px;
+            width: 400px;
+            height: 200px;
+        }
+        #player_1 {
+            top: 121px;
+            left: -31px;
+        }
+        #player_2 {
+            top: 321px;
+            left: 180px;
+        }
+        #player_3 {
+            top: 9px;
+            left: 393px;
+        }
+        .goldwrap {
+            position: relative;
+            height: 19px;
+            width: 48px;
+            border: 1px solid black;
+        }
+        #p1_gold {
+            top: 90px;
+            right: 76px;
+        }
+        #p2_gold {
+            top: 325px;
+            right: -173px;
+        }
+        #p3_gold {
+            top: -22px;
+            right: -434px;
+        }
+        .player_chair {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            border: 1px solid black;
+            position: relative;
+            background: grey;
+        }
+        .card {
+            flex: 1 2;
+            border: 1px solid black;
+            margin-right: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    const socket = io('/game');
+    let player_width = 0, player_height, headdiv
+    let lobbyHTML = ""
+    let message = ""
+    let username = []
+    let substrings = window.location.href.split("/")
+    let localuser = substrings[substrings.length - 1]
+
+    function main() {
+        socket.emit('get_all_users')
+        let title = document.createElement("div")
+        title.setAttribute("id", "title")
+        document.body.appendChild(title)
+        title.innerHTML = "<span id='pagetitle' style='font-size: 48px; margin: 50px'>UNB Poker</span>"
+        let gridwrap = document.createElement("div")
+        gridwrap.setAttribute("id", "gridwrap")
+        document.body.appendChild(gridwrap)
+        let grid = document.createElement("div")
+        grid.setAttribute("id", "grid")
+        gridwrap.appendChild(grid)
+        let grid2 = document.createElement("div")
+        grid2.setAttribute("id", "grid2")
+        gridwrap.appendChild(grid2)
+        headdiv = document.createElement("div")
+        headdiv.setAttribute("id", "head")
+        headdiv.innerHTML = "<div class='alert alert-warning' role='alert'>Waiting for admin to start game...</div>"
+        grid2.appendChild(headdiv)
+        let pokerHTML = '<div id="pokerwrap" style="margin-top: 20px; width: 400px; height: 400px;"></div>'
+        grid.insertAdjacentHTML('afterbegin', pokerHTML)
+        let gridHTML =  '<div style="text-align: center; margin-top: 30px;">Your Cards</div>' +
+                        '<div id="yourcards">' +
+                            '<div id="card_1" class="card"></div>' +
+                            '<div id="card_2" class="card"></div>' +
+                        '</div>'
+        document.getElementById('grid2').insertAdjacentHTML('beforeend', gridHTML)
+        const pokerwrap = document.getElementById('pokerwrap')
+        let divstuff = '<div id="grid3"><div id="usermessagewrap"><div style="margin-top:50px;">Chat with other players:</div><div id="usermessages"></div>' + '<input id="userinput" type="text" style="margin-top: 20px; width: 400px; height: 20px;"></input>' +
+            '<button id="sendbtn">Send</button></div>' +
+            '<div id="lobbywrap"><div>Lobby</div><div id="lobbycontents"></div></div></div>'
+        gridwrap.insertAdjacentHTML('afterend', divstuff)
+        document.getElementById('sendbtn').addEventListener("click", function() {
+            socket.emit('message', document.getElementById('userinput').value)
+            document.getElementById('userinput').value = ""
+        })
+        document.addEventListener("keyup", function(e) {
+            if (e.key === 'Enter') {
+                let str = document.getElementById('userinput').value
+                if (str.length > 0) {
+                    socket.emit('message', document.getElementById('userinput').value)
+                    document.getElementById('userinput').value = ""
+                }
+            }
+        });
+        pokerwrap.insertAdjacentHTML('beforeend', '<div id="player_1" class="player_chair" >'
+                                                + localuser.charAt(0).toUpperCase() + '</div>'
+                                                + "<div id='p1_gold' class='goldwrap'>500</div>")
+        pokerwrap.insertAdjacentHTML('beforeend', '<div id="player_2" class="player_chair" ></div>'
+                                                + "<div id='p2_gold' class='goldwrap'>500</div>")
+        pokerwrap.insertAdjacentHTML('beforeend', '<div id="player_3" class="player_chair" ></div>'
+            + "<div id='p3_gold' class='goldwrap'>500</div>")
+    }
+
+    main();
+
+    socket.on('user_message', (msg) => {
+        const usermessages = document.getElementById('usermessages')
+        let innerHTML = usermessages.innerHTML
+        usermessages.innerHTML = innerHTML + "<br>" + msg
+        usermessages.scrollTop = usermessages.scrollHeight
+    })
+
+    socket.on('flop', (cards) => {
+        let flopHTML = "<div id='flop'>" +
+                            "<div id='flop_card_1' class='flopcard'> </div>" +
+                            "<div id='flop_card_2' class='flopcard'> </div>" +
+                            "<div id='flop_card_3' class='flopcard'> </div>" +
+                            "<div id='flop_card_4' class='flopcard'> </div>" +
+                            "<div id='flop_card_5' class='flopcard'> </div>" +
+                       "</div>"
+        document.getElementById("pokerwrap").insertAdjacentHTML("beforeend", flopHTML)
+        for (let i = 0; i < 3; i++) {
+            let cardID = "flop_card_" + (i + 1)
+            document.getElementById(cardID).innerHTML = getCardHTML(cards[i])
+        }
+        document.getElementById('flop_card_4').style.visibility = "hidden"
+        document.getElementById('flop_card_5').style.visibility = "hidden"
+    })
+
+    socket.on('fourth_st', (fourth_card) => {
+        let cardID = 'flop_card_4'
+        document.getElementById(cardID).style.visibility = "visible"
+        document.getElementById(cardID).innerHTML = getCardHTML(fourth_card)
+    })
+
+    socket.on('river', (fifth_card) => {
+        let cardID = 'flop_card_5'
+        document.getElementById(cardID).style.visibility = "visible"
+        document.getElementById(cardID).innerHTML = getCardHTML(fifth_card)
+    })
+
+    socket.on('update_lobby', (players) => {
+        let oldLobbyHTML = lobbyHTML
+        lobbyHTML = ""
+        players.forEach(p => {
+            lobbyHTML += '<br>' + p.username + ((p.admin) ? ' (admin)' : '')
+        })
+        if (lobbyHTML !== oldLobbyHTML) {
+            document.getElementById('lobbycontents').innerHTML = lobbyHTML
+            let seats = document.getElementsByClassName("player_chair")
+            for (let playerPos = 0; playerPos < players.length; playerPos++) {
+                seats[playerPos].innerText = players[playerPos].username
+            }
+        }
+    })
+
+    socket.on('initialize_game', (players) => {
+        let localPlayer = ""
+        players.forEach(player => {
+            if (player.username === localuser) {
+                localPlayer = player
+             }
+        })
+        changeTurn(players)
+        if (localPlayer.admin) {
+            document.getElementById('startgame').style.display="none"
+        }
+        socket.emit('fetchdeck')
+    })
+
+    socket.on('usernames', (usernames) => {
+        username.push(usernames[0])
+        username.push(usernames[1])
+        username.push(usernames[2])
+    })
+
+    socket.on('change_turn', (players) => {
+        console.log("changing turn!")
+        console.log("players: ")
+        console.log(players)
+        changeTurn(players)
+    })
+
+    socket.on('init_admin', () => {
+        console.log("Initializing admin stuff...")
+        document.getElementById('pagetitle').insertAdjacentHTML('afterend', "<button id='startgame'>Start</button>")
+        document.getElementById('startgame').addEventListener("click", function() {
+            socket.emit('start_game')
+        })
+        document.getElementById('head').innerHTML =
+            "<div class='alert alert-success' role='alert'>Waiting for you to start the game...</div>"
+    })
+
+    socket.on('update_cards', (cards) => {
+        document.getElementById('card_1').innerHTML = getCardHTML(cards[0])
+        document.getElementById('card_2').innerHTML = getCardHTML(cards[1])
+    })
+
+    function changeTurn(players) {
+        let localPlayer = ""
+        players.forEach(player => {
+            if (player.username === localuser) {
+                localPlayer = player
+            }
+        })
+        if (localPlayer.turn) {
+            document.getElementById('head').innerHTML = "<div class=\"alert alert-success\" role=\"alert\"> Your turn! </div>"
+            let yourMove =  '<div id="yourmovetitle" style="text-align: center; margin-top: 30px;">Your Move</div><div id="yourmove" style="display: flex"> ' +
+                '<div class="playermove" id="fold" style="flex: 1 4;">Fold</div>' +
+                '<div class="playermove" id="check" style="flex: 1 4;">Check</div>' +
+                '<div class="playermove" style="flex: 1 4;">Call</div>' +
+                '<div class="playermove" style="flex: 1 4;">Raise</div></div>'
+            document.getElementById('grid2').insertAdjacentHTML('beforeend', yourMove)
+            document.getElementById('fold').addEventListener("click", function() {
+                console.log("Folding")
+                socket.emit('fold')
+            })
+            document.getElementById('check').addEventListener("click", function() {
+                socket.emit('check')
+            })
+        }
+        else {
+            console.log("not this players turn")
+            document.getElementById('head').innerHTML = "<div class=\"alert alert-dark\" role=\"alert\"> Waiting for turn... </div>"
+            if (document.getElementById('yourmove')) {
+                document.getElementById('yourmovetitle').remove()
+                document.getElementById('yourmove').remove()
+            }
+        }
+    }
+
+    function getCardHTML (card) {
+        return "<span style='color: " +
+            ((card.type === "Hearts" || card.type === "Diamonds") ? "Red" : "Black") + "'>" +
+            reassignCardVal(card.val) + " " +
+            reassignCardType(card.type) + "</span>"
+    }
+
+    function reassignCardVal(val) {
+        if (val === 11) {
+            return "J"
+        } else if (val === 12) {
+            return "Q"
+        } else if (val === 13) {
+            return "K"
+        } else {
+            return val
+        }
+    }
+
+    function reassignCardType(type) {
+        if (type === "Hearts") {
+            return '♥️'
+        } else if (type === "Spades") {
+                return "♠️"
+        } else if (type === "Diamonds") {
+            return "♦️️"
+        }  else if (type === "Clubs") {
+            return "♣️️"
+        }
+    }
+
+</script>
+</body>
+</html>
